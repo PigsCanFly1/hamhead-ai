@@ -1,0 +1,50 @@
+# ── SECRETS & CREDENTIALS ──────────────────────────────────
+secrets/tokens.env
+secrets/tokens.env.local
+.env
+.env.local
+.env.*.local
+server/.env
+client/.env
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# ── DEPENDENCIES ────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── BUILD OUTPUTS ───────────────────────────────────────────
+dist/
+build/
+.vite/
+
+# ── PRISMA ──────────────────────────────────────────────────
+server/prisma/migrations/dev.db
+*.db
+*.db-journal
+
+# ── LOGS ────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+
+# ── OS / EDITOR ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── DOCKER ──────────────────────────────────────────────────
+.docker/
+
+# ── MISC ────────────────────────────────────────────────────
+*.tmp
+*.bak
+.cache/

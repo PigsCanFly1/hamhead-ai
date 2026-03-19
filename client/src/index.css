@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --wheat: #F4D03F;
+  --soil: #2C1810;
+  --neon: #00FF88;
+  --deep: #0A0E27;
+  --rust: #B7410E;
+  --cloud: #F9F7F0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background-color: var(--cloud);
+  color: var(--soil);
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: 'Syne', sans-serif;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.breathing {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.marquee-content {
+  display: inline-block;
+  animation: marquee 20s linear infinite;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cloud);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rust);
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--wheat);
+  color: var(--soil);
+}

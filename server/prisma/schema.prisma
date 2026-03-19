@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Application {
+  id          String    @id @default(uuid())
+  name        String
+  description String    @db.Text
+  day         Int       @unique
+  category    Category
+  status      Status    @default(DEVELOPMENT)
+  imageUrl    String?
+  githubUrl   String?
+  demoUrl     String?
+  tags        String[]
+  releaseDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
+model Campaign {
+  id           String   @id @default("current")
+  totalDays    Int      @default(100)
+  currentDay   Int      @default(23)
+  appsReleased Int      @default(23)
+  startDate    DateTime @default("2024-02-15T00:00:00Z")
+  title        String   @default("100 Days - 100 Apps")
+  description  String   @db.Text @default("Ham-Head AI commits to 100 AI applications in 100 days")
+  isActive     Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+}
+
+model Subscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  source    String   @default("website")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  message   String   @db.Text
+  subject   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum Category {
+  ECONOMIC
+  SPIRITUAL
+  SOCIAL
+  PERSONAL
+  TECHNICAL
+}
+
+enum Status {
+  DEVELOPMENT
+  BETA
+  RELEASED
+  ARCHIVED
+}

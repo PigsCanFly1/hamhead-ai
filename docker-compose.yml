@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hamhead-db
+    environment:
+      POSTGRES_USER: hamhead
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_DB: hamheadai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hamhead -d hamheadai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: ./server
+    container_name: hamhead-api
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://hamhead:dev_password_123@postgres:5432/hamheadai?schema=public
+      - JWT_SECRET=ham-head-ai-super-secret-key-2024-midwest-agentic
+      - CLIENT_URL=http://localhost:5173
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: sh -c "npx prisma generate && npx prisma db push --accept-data-loss && node prisma/seed.js && npm run dev"
+
+  client:
+    build: ./client
+    container_name: hamhead-client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+      - API_TARGET=http://server:5000
+    depends_on:
+      - server
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
