@@ -23,6 +23,10 @@
     "vault:unlock": "bash secrets/vault.sh unlock",
     "vault:status": "bash secrets/vault.sh status",
     "vault:edit": "bash secrets/vault.sh edit",
-    "vault:docker": "bash secrets/vault.sh docker"
+    "vault:docker": "bash secrets/vault.sh docker",
+    "deploy": "bash deploy.sh",
+    "deploy:check": "bash deploy.sh --check",
+    "deploy:restart": "bash deploy.sh --restart",
+    "deploy:logs": "bash -c 'source secrets/tokens.env && ssh -i ${HOSTINGER_SSH_KEY_PATH/#\\~/$HOME} -o StrictHostKeyChecking=no ${HOSTINGER_SSH_USER}@${HOSTINGER_SSH_HOST} \"docker compose -f /opt/hamhead-ai/docker-compose.yaml logs -f --tail=100\"'"
   }
 }
