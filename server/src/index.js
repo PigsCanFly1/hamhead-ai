@@ -9,6 +9,7 @@ import appsRouter from './routes/apps.js';
 import campaignRouter from './routes/campaign.js';
 import subscribersRouter from './routes/subscribers.js';
 import contactRouter from './routes/contact.js';
+import stubRouter from './routes/stub.js';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.use('/api/apps', appsRouter);
 app.use('/api/campaign', campaignRouter);
 app.use('/api/subscribers', subscribersRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api/stub', stubRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({

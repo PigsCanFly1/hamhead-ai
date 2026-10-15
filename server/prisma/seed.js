@@ -119,6 +119,16 @@ async function main() {
       status: "DEVELOPMENT",
       tags: ["coding", "mentorship", "technical"],
     },
+    {
+      name: "Stub",
+      description: "Paystubs on autopilot for small businesses. Describe the pay period in plain English and get finished paystubs with taxes, deductions, YTD totals and PDF downloads.",
+      day: 26,
+      category: "ECONOMIC",
+      status: "RELEASED",
+      tags: ["payroll", "small-business", "ai"],
+      demoUrl: "/apps/stub/",
+      releaseDate: new Date('2026-10-15'),
+    },
   ];
 
   for (const app of apps) {
