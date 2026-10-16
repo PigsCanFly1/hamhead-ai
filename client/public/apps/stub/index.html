@@ -413,7 +413,7 @@ async function plan(){
   const freq=db.business.freq,period=defaultPeriod(freq);
   try{
     const j=await api('plan',{text,today:iso(new Date()),freq,defaultHours:DEFHRS[freq],period,
-      employees:db.employees.map(e=>({id:e.id,name:e.name,type:e.type,rate:num(e.rate)}))});
+      employees:db.employees.map(e=>({id:e.id,name:e.name,type:e.type,rate:num(e.rate),usualHours:defHours(e)}))});
     const items=(j.items||[]).filter(i=>getEmp(i.empId)).map(i=>itemFor(getEmp(i.empId),{...i,hours:Math.max(0,num(i.hours)),overtimeHours:Math.max(0,num(i.overtimeHours)),bonus:Math.max(0,num(i.bonus))}));
     if(!items.length){ui.aiError=(j.unmatched||[]).length?`Couldn't match ${j.unmatched.join(', ')} to anyone on your People list.`:"Couldn't work out who to pay from that. Try naming people.";}
     else{ui.proposal=newProposal(items,{summary:j.summary||'',unmatched:j.unmatched||[],source:'ai',

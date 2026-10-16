@@ -27,6 +27,7 @@ const Employee = z.object({
   name: z.string().max(120),
   type: z.enum(['hourly', 'salary', 'contractor']),
   rate: z.number().nonnegative().max(10_000_000),
+  usualHours: z.number().nonnegative().max(1000).optional(),
 });
 
 const PlanReq = z.object({
@@ -98,7 +99,7 @@ const PLAN_SYSTEM = `You turn a small-business owner's plain-English payroll req
 Rules:
 - Only use employee ids from the provided roster. Match names loosely (first names, nicknames, typos).
 - "Everyone" / "the usual" / "regular payroll" means every employee on the roster.
-- Hourly employees default to the provided default hours when hours aren't stated. Salary employees: hours 0 (salary is fixed). Contractors: hours as stated, else 0.
+- When hours aren't stated, use each person's usualHours from the roster (for anyone without usualHours, hourly employees get the default hours). Salary employees: hours 0 (salary is fixed).
 - Overtime is only what the user says is overtime. Bonuses are dollar amounts.
 - Leave periodStart/periodEnd/payDate empty unless the user asks for specific dates; resolve relative dates against today.
 - Put anything you could not match in "unmatched". Never invent employees.`;
