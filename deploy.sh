@@ -20,6 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SECRETS_FILE="$SCRIPT_DIR/secrets/tokens.env"
 REMOTE_DIR="/opt/hamhead-ai"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"   # the repo's default branch
 DOMAIN="ham-headai.com"
 ACME_EMAIL="admin@ham-headai.com"
 APP_NETWORK="hamhead-ai_app-net"
@@ -131,7 +132,7 @@ _ssh "mkdir -p $REMOTE_DIR"
 REPO_EXISTS=$(_ssh "[ -d $REMOTE_DIR/.git ] && echo yes || echo no")
 if [[ "$REPO_EXISTS" == "yes" ]]; then
   log "Pulling latest code..."
-  _ssh "cd $REMOTE_DIR && git fetch --all && git reset --hard origin/main"
+  _ssh "cd $REMOTE_DIR && git fetch --all && git reset --hard origin/$DEPLOY_BRANCH"
   ok "Code updated"
 else
   # Sync files via scp (no git required on remote)
