@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stub – paystubs on autopilot</title>
+<meta name="description" content="Stub turns a one-line description of your pay period into finished paystubs. A Ham-Head AI app.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230E6F79'/%3E%3Cpath d='M10 8h8l4 4v12H10z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 17h6M13 21h6' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F6F7FC; --ink:#141822; --muted:#69708A; --line:rgba(20,24,34,.09);
+  --glass:rgba(255,255,255,.55); --glass-strong:rgba(255,255,255,.82); --glass-edge:rgba(255,255,255,.95);
+  --field:rgba(255,255,255,.7);
+  --shadow:0 1px 0 rgba(255,255,255,.9) inset,0 24px 60px -30px rgba(50,60,120,.28);
+  --accent:#0E6F79; --accent-ink:#fff; --accent-soft:rgba(14,111,121,.1);
+  --danger:#B3261E; --ok:#1B7A4B;
+  --orb1:rgba(168,184,255,.55); --orb2:rgba(150,225,200,.5); --orb3:rgba(255,200,176,.5);
+  color-scheme:light dark;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1017; --ink:#EEF1F8; --muted:#97A0B8; --line:rgba(255,255,255,.1);
+    --glass:rgba(32,38,56,.5); --glass-strong:rgba(36,43,64,.85); --glass-edge:rgba(255,255,255,.12);
+    --field:rgba(255,255,255,.06);
+    --shadow:0 1px 0 rgba(255,255,255,.06) inset,0 24px 60px -30px rgba(0,0,0,.7);
+    --accent:#62CDD6; --accent-ink:#06262A; --accent-soft:rgba(98,205,214,.14);
+    --danger:#FF8A80; --ok:#6FDC9E;
+    --orb1:rgba(90,110,220,.35); --orb2:rgba(40,150,130,.3); --orb3:rgba(200,110,80,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1017; --ink:#EEF1F8; --muted:#97A0B8; --line:rgba(255,255,255,.1);
+  --glass:rgba(32,38,56,.5); --glass-strong:rgba(36,43,64,.85); --glass-edge:rgba(255,255,255,.12);
+  --field:rgba(255,255,255,.06);
+  --shadow:0 1px 0 rgba(255,255,255,.06) inset,0 24px 60px -30px rgba(0,0,0,.7);
+  --accent:#62CDD6; --accent-ink:#06262A; --accent-soft:rgba(98,205,214,.14);
+  --danger:#FF8A80; --ok:#6FDC9E;
+  --orb1:rgba(90,110,220,.35); --orb2:rgba(40,150,130,.3); --orb3:rgba(200,110,80,.25);
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:15px/1.55 'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;border-radius:50%;filter:blur(70px)}
+.orbs i:nth-child(1){width:520px;height:520px;background:var(--orb1);top:-160px;left:-120px}
+.orbs i:nth-child(2){width:460px;height:460px;background:var(--orb2);bottom:-140px;right:8%}
+.orbs i:nth-child(3){width:340px;height:340px;background:var(--orb3);top:34%;right:-100px}
+h1,h2,h3{font-family:'Bricolage Grotesque','Figtree',sans-serif;letter-spacing:-.02em;margin:0;font-weight:600}
+h1{font-size:clamp(28px,4.2vw,42px);line-height:1.1}
+h2{font-size:20px;line-height:1.25}
+p{margin:0}
+.sub{color:var(--muted);margin-top:10px;max-width:56ch}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(26px) saturate(165%);backdrop-filter:blur(26px) saturate(165%);border:1px solid var(--glass-edge);box-shadow:var(--shadow)}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;padding:20px;display:flex;flex-direction:column}
+.rail .panel{flex:1;border-radius:28px;padding:26px 14px 18px;display:flex;flex-direction:column}
+.brand{font:700 26px 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em;padding:0 12px 28px;display:flex;align-items:center;gap:8px}
+.brand::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:11px 12px;border-radius:14px;color:var(--muted);font-weight:500;text-align:left}
+.nav button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.nav button:hover{color:var(--ink)}
+.nav button.on{background:var(--accent-soft);color:var(--accent)}
+.railfoot{margin-top:auto;padding:0 12px;color:var(--muted);font-size:13px}
+.railfoot a{color:inherit}
+main{padding:44px clamp(20px,4vw,56px) 80px;max-width:1080px;width:100%}
+.pagehead{margin-bottom:36px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+section+section{margin-top:44px}
+
+.btn{border:1px solid var(--line);background:var(--field);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;transition:transform .15s,background .15s}
+.btn:hover{background:var(--glass-strong)}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08);background:var(--accent)}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:6px 12px;font-size:13px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+.hero{border-radius:32px;padding:clamp(24px,4vw,48px)}
+.ask{margin-top:28px;display:flex;gap:12px;align-items:flex-end}
+.ask textarea{flex:1;resize:none;min-height:64px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.chip{border:1px solid var(--line);background:var(--field);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted)}
+.chip:hover{color:var(--ink);background:var(--glass-strong)}
+
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:14px;padding:11px 14px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
+input:disabled{opacity:.5}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.fg{margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.hint{font-size:13px;color:var(--muted);margin-top:6px}
+.grid2>*,.grid3>*{min-width:0}
+input[type=date]{min-width:0;min-height:46px}
+
+.panel{border-radius:28px}
+.pad{padding:clamp(20px,3vw,32px)}
+.list{display:flex;flex-direction:column}
+.rowitem{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:16px 4px;border-radius:0}
+.rowitem:first-child{border-top:0}
+button.rowitem:hover{background:var(--accent-soft);border-radius:14px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:600;flex:none}
+.grow{flex:1;min-width:0}
+.name{font-weight:600}
+.meta{color:var(--muted);font-size:13px}
+.amt{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.tag{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.tag.quiet{background:var(--field);color:var(--muted)}
+.secthead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+.empty{color:var(--muted);padding:28px 4px}
+.note{font-size:13px;color:var(--muted)}
+.note.err{color:var(--danger);margin-top:16px}
+.think{display:flex;align-items:center;gap:12px;color:var(--muted)}
+.pulse{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25;transform:scale(.7)}}
+
+.split{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;align-items:start}
+.split .form{position:sticky;top:24px}
+.prop{margin-top:24px}
+.propgrid{display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(3,minmax(64px,.8fr)) minmax(90px,1fr) auto;gap:10px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.propgrid input{padding:8px 10px;font-size:15px;border-radius:10px}
+.propgrid .l{font-size:11px;color:var(--muted);display:block;margin-bottom:2px}
+.ded{display:grid;grid-template-columns:1.6fr .9fr .7fr 1fr auto;gap:8px;margin-bottom:8px}
+.ded input,.ded select{padding:9px 10px;font-size:15px;border-radius:10px}
+.checks label{display:flex;align-items:center;gap:10px;padding:7px 2px;font-weight:500}
+.checks input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.stats{display:flex;gap:28px;flex-wrap:wrap}
+.stats b{display:block;font:700 22px 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+
+#modal{position:fixed;inset:0;z-index:50;display:none}
+#modal.on{display:block}
+.scrim{position:absolute;inset:0;background:rgba(10,14,28,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sheet{position:absolute;left:50%;top:max(24px,env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(680px,calc(100% - 24px));max-height:calc(100% - 48px);overflow:auto;border-radius:30px;padding:clamp(20px,3vw,34px);background:var(--glass-strong)}
+.sheet.wide{width:min(820px,calc(100% - 24px))}
+.sheet h2{margin-bottom:20px}
+.sheethead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap}
+.sheethead h2{margin:0}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:14px;font-weight:500;z-index:80;transition:.25s}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.review{margin-top:18px;font-size:14px}
+.review ul{margin:8px 0 0;padding-left:20px}
+.review li{margin-bottom:6px}
+.review .okline{color:var(--ok);font-weight:600}
+
+.paper{background:#fff;color:#141822;border-radius:16px;padding:clamp(18px,3vw,36px);font-size:13px;line-height:1.5;box-shadow:0 30px 60px -34px rgba(30,40,90,.4);border:1px solid rgba(20,24,34,.06);color-scheme:light}
+.paper .ph{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.paper .biz{font:700 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}
+.paper .mut{color:#6B7285}
+.paper .right{text-align:right}
+.paper .metas{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:22px 0;padding:16px 0;border-top:1px solid #E6E9F1;border-bottom:1px solid #E6E9F1}
+.paper .metas b{display:block;font-size:11px;color:#6B7285;font-weight:600}
+.paper .tw{overflow-x:auto;margin-top:18px}
+.paper table{width:100%;border-collapse:collapse;min-width:420px}
+.paper th{font-size:11px;color:#6B7285;font-weight:600;text-align:right;padding:6px 0;border-bottom:1px solid #E6E9F1}
+.paper th:first-child,.paper td:first-child{text-align:left}
+.paper td{padding:7px 0;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid #F0F2F7}
+.paper tr.tot td{font-weight:600;border-bottom:0}
+.paper .perf{border-top:2px dashed #CBD1E2;margin:26px 0 18px}
+.paper .net{display:flex;justify-content:space-between;align-items:baseline;gap:12px;background:#F3F5FA;border-radius:14px;padding:16px 20px}
+.paper .net strong{font:700 28px 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.paper .fine{margin-top:14px;font-size:11px;color:#8A91A6}
+
+@media (max-width:860px){
+  .app{display:block}
+  .rail{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:30}
+  .rail .panel{padding:6px;border-radius:24px;flex-direction:row}
+  .brand,.railfoot{display:none}
+  .nav{flex-direction:row;width:100%;justify-content:space-between}
+  .nav button{flex-direction:column;gap:2px;padding:8px 6px;font-size:11px;flex:1;align-items:center;text-align:center}
+  main{padding:28px 16px 130px}
+  .split{grid-template-columns:1fr}
+  .split .form{position:static}
+  .ask{flex-direction:column;align-items:stretch}
+  .propgrid{grid-template-columns:1fr 1fr 1fr}
+  .propgrid>:first-child{grid-column:1/-1}
+  .propgrid>:last-child{grid-column:1/-1}
+  .ded{grid-template-columns:1fr 1fr}
+  .grid3{grid-template-columns:1fr 1fr}
+  .rowitem{gap:12px}
+  .rowitem .tag.quiet{display:none}
+}
+@media (max-width:480px){.grid2,.grid3{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="orbs" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="app">
+  <aside class="rail">
+    <div class="panel glass">
+      <div class="brand">Stub</div>
+      <nav class="nav" aria-label="Main">
+        <button data-act="nav" data-view="today"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Today</button>
+        <button data-act="nav" data-view="people"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14c2.2.7 3.5 2.8 3.5 6"/></svg>People</button>
+        <button data-act="nav" data-view="stubs"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>Paystubs</button>
+        <button data-act="nav" data-view="auto"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>Autopilot</button>
+        <button data-act="nav" data-view="settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Settings</button>
+      </nav>
+      <div class="railfoot"><div id="railfoot"></div><a href="/">A Ham-Head AI app</a></div>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="modal"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n||0);
+const r2=n=>Math.round((n+Number.EPSILON)*100)/100;
+const uid=()=>Math.random().toString(36).slice(2,10);
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmtDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')?parseD(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+const trim=n=>String(+(+n).toFixed(2));
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'stub';
+const isoOk=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(parseD(s));
+const initials=s=>String(s||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const first=s=>String(s||'').trim().split(/\s+/)[0];
+
+/* ---------- state ---------- */
+const KEY='stub:v1';
+const db={business:{name:'',address:'',ein:'',freq:'biweekly'},employees:[],stubs:[],rules:[]};
+try{const raw=localStorage.getItem(KEY);if(raw)Object.assign(db,JSON.parse(raw))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+const ui={view:'today',draft:null,proposal:null,busy:false,ctl:null,aiError:'',empDraft:null,ruleDraft:null,open:null,modal:null,review:null,reviewing:false,ai:'pending',ask:'',q:'',fe:''};
+
+const PERIODS={weekly:52,biweekly:26,semimonthly:24,monthly:12};
+const DAYS={weekly:7,biweekly:14,semimonthly:15,monthly:30};
+const FREQ={weekly:'Weekly',biweekly:'Every two weeks',semimonthly:'Twice a month',monthly:'Monthly'};
+const DEFHRS={weekly:40,biweekly:80,semimonthly:86,monthly:173};
+const TYPES={hourly:'Hourly employee',salary:'Salaried employee',contractor:'Contractor (1099)'};
+const SOURCES={ai:'AI drafted',autopilot:'Autopilot',manual:'Manual',run:'Payroll run'};
+const SS_CAP=184500; /* 2026 Social Security wage base */
+
+const getEmp=id=>db.employees.find(e=>e.id===id);
+const getStub=id=>db.stubs.find(s=>s.id===id);
+const ytdFor=(empId,pd)=>db.stubs.filter(s=>s.empId===empId&&String(s.payDate).slice(0,4)===String(pd||'').slice(0,4));
+const defHours=emp=>emp.type==='salary'?0:(emp.hours!==''&&emp.hours!=null?num(emp.hours):emp.type==='hourly'?DEFHRS[db.business.freq]||80:0);
+const rateLabel=e=>e.type==='salary'?`${money(e.rate)}/yr`:`${money(e.rate)}/hr`;
+
+function defaultPeriod(freq,t=new Date()){
+  t=new Date(t.getFullYear(),t.getMonth(),t.getDate());let s,e;
+  if(freq==='semimonthly'){
+    if(t.getDate()>=16){s=new Date(t.getFullYear(),t.getMonth(),1);e=new Date(t.getFullYear(),t.getMonth(),15)}
+    else{s=new Date(t.getFullYear(),t.getMonth()-1,16);e=new Date(t.getFullYear(),t.getMonth(),0)}
+  }else if(freq==='monthly'){s=new Date(t.getFullYear(),t.getMonth()-1,1);e=new Date(t.getFullYear(),t.getMonth(),0)}
+  else{const back=(t.getDay()+2)%7;e=addDays(t,-back);s=addDays(e,freq==='weekly'?-6:-13)}
+  const long=freq==='semimonthly'||freq==='monthly';
+  return{periodStart:iso(s),periodEnd:iso(e),payDate:iso(addDays(e,long?3:5))};
+}
+
+/* ---------- payroll math ---------- */
+function buildStub(emp,inp,excludeId){
+  const per=PERIODS[db.business.freq]||26;
+  const hrs=num(inp.hours),ot=num(inp.overtimeHours),bonus=num(inp.bonus),rate=num(emp.rate);
+  const earnings=[];
+  if(emp.type==='salary')earnings.push({label:'Salary',hours:null,rate:null,amount:r2(rate/per)});
+  else if(emp.type==='contractor')earnings.push({label:'Services',hours:r2(hrs+ot),rate,amount:r2((hrs+ot)*rate)});
+  else{
+    earnings.push({label:'Regular',hours:hrs,rate,amount:r2(hrs*rate)});
+    if(ot>0)earnings.push({label:'Overtime (1.5×)',hours:ot,rate:r2(rate*1.5),amount:r2(ot*rate*1.5)});
+  }
+  if(bonus>0)earnings.push({label:'Bonus',hours:null,rate:null,amount:r2(bonus)});
+  const gross=r2(earnings.reduce((a,e)=>a+e.amount,0));
+  /* year-to-date counts only stubs paid on or before this one */
+  const prior=ytdFor(emp.id,inp.payDate).filter(s=>s.id!==excludeId&&(s.payDate<inp.payDate||(s.payDate===inp.payDate&&(inp.createdAt==null||s.createdAt<inp.createdAt))));
+  const priorGross=prior.reduce((a,s)=>a+s.gross,0);
+  let deductions=[],taxes=[];
+  if(emp.type!=='contractor'){
+    deductions=(emp.deductions||[]).filter(d=>num(d.amount)>0&&d.label).map(d=>({label:d.label,timing:d.timing,amount:Math.min(gross,r2(d.mode==='pct'?gross*num(d.amount)/100:num(d.amount)))}));
+    const pre=deductions.filter(d=>d.timing==='pre').reduce((a,d)=>a+d.amount,0);
+    const taxable=Math.max(0,gross-pre);
+    const add=(l,a)=>{if(a>0)taxes.push({label:l,amount:r2(a)})};
+    add('Federal income tax (est.)',taxable*num(emp.fedPct)/100);
+    add('State income tax (est.)',taxable*num(emp.statePct)/100);
+    add('Social Security',Math.min(gross,Math.max(0,SS_CAP-priorGross))*0.062);
+    add('Medicare',gross*0.0145);
+  }
+  const sum=a=>r2(a.reduce((x,y)=>x+y.amount,0));
+  const totalTaxes=sum(taxes),totalDed=sum(deductions),net=r2(gross-totalTaxes-totalDed);
+  const yl=(k,l)=>r2(prior.reduce((a,s)=>a+((s[k]||[]).find(x=>x.label===l)||{amount:0}).amount,0));
+  earnings.forEach(e=>e.ytd=r2(yl('earnings',e.label)+e.amount));
+  taxes.forEach(e=>e.ytd=r2(yl('taxes',e.label)+e.amount));
+  deductions.forEach(e=>e.ytd=r2(yl('deductions',e.label)+e.amount));
+  return{empId:emp.id,empName:emp.name,empAddress:emp.address||'',empType:emp.type,
+    hours:hrs,overtimeHours:ot,bonus,periodStart:inp.periodStart,periodEnd:inp.periodEnd,payDate:inp.payDate,
+    earnings,taxes,deductions,gross,totalTaxes,totalDed,net,
+    ytd:{gross:r2(priorGross+gross),taxes:r2(prior.reduce((a,s)=>a+s.totalTaxes,0)+totalTaxes),ded:r2(prior.reduce((a,s)=>a+s.totalDed,0)+totalDed),net:r2(prior.reduce((a,s)=>a+s.net,0)+net)},
+    biz:{name:db.business.name,address:db.business.address,ein:db.business.ein},note:inp.note||''};
+}
+/* Re-total year-to-date figures for one person after a stub is added, edited or removed.
+   Only YTD columns change; the amounts on saved stubs stay as they were issued. */
+function recalcYtd(empId){
+  const mine=db.stubs.filter(s=>s.empId===empId).sort((a,b)=>a.payDate<b.payDate?-1:a.payDate>b.payDate?1:a.createdAt-b.createdAt);
+  let year='',acc;
+  for(const s of mine){
+    const y=String(s.payDate).slice(0,4);
+    if(y!==year){year=y;acc={lines:{},gross:0,taxes:0,ded:0,net:0}}
+    for(const k of ['earnings','taxes','deductions'])(s[k]||[]).forEach(l=>{const key=k+'|'+l.label;acc.lines[key]=r2((acc.lines[key]||0)+l.amount);l.ytd=acc.lines[key]});
+    acc.gross=r2(acc.gross+s.gross);acc.taxes=r2(acc.taxes+s.totalTaxes);acc.ded=r2(acc.ded+s.totalDed);acc.net=r2(acc.net+s.net);
+    s.ytd={gross:acc.gross,taxes:acc.taxes,ded:acc.ded,net:acc.net};
+  }
+}
+function commitStub(emp,inp,source){
+  const s=buildStub(emp,inp);s.id=uid();s.createdAt=Date.now();s.source=source;
+  db.stubs.push(s);recalcYtd(emp.id);save();return s;
+}
+const paidFor=(empId,periodEnd)=>db.stubs.some(s=>s.empId===empId&&s.periodEnd===periodEnd);
+
+/* ---------- paper preview ---------- */
+function paper(s){
+  const hrsFmt=e=>e.hours!=null?trim(e.hours):'';
+  const earn=s.earnings.map(e=>`<tr><td>${esc(e.label)}</td><td>${hrsFmt(e)}</td><td>${e.rate!=null?money(e.rate):''}</td><td>${money(e.amount)}</td><td>${money(e.ytd)}</td></tr>`).join('');
+  const lines=(arr)=>arr.map(e=>`<tr><td>${esc(e.label)}${e.timing==='pre'?' <span class="mut">(pre-tax)</span>':''}</td><td>${money(e.amount)}</td><td>${money(e.ytd)}</td></tr>`).join('');
+  const title=s.empType==='contractor'?'Payment statement':'Earnings statement';
+  const block=(h,arr,tot,ytd)=>arr.length?`<div class="tw"><table><thead><tr><th>${h}</th><th>Current</th><th>YTD</th></tr></thead><tbody>${lines(arr)}<tr class="tot"><td>Total ${h.toLowerCase()}</td><td>${money(tot)}</td><td>${money(ytd)}</td></tr></tbody></table></div>`:'';
+  return `<article class="paper" aria-label="${title} preview">
+    <div class="ph"><div><div class="biz">${esc(s.biz.name||'Your business')}</div>
+      <div class="mut">${esc(s.biz.address||'').replace(/\n/g,'<br>')}${s.biz.ein?`<br>EIN ${esc(s.biz.ein)}`:''}</div></div>
+      <div class="right"><b>${title}</b><div class="mut">Pay date ${fmtDate(s.payDate)}</div></div></div>
+    <div class="metas">
+      <div><b>${s.empType==='contractor'?'Paid to':'Employee'}</b>${esc(s.empName)}${s.empAddress?`<br><span class="mut">${esc(s.empAddress).replace(/\n/g,'<br>')}</span>`:''}</div>
+      <div><b>Pay period</b>${fmtDate(s.periodStart)} – ${fmtDate(s.periodEnd)}</div>
+      <div><b>Pay type</b>${esc(TYPES[s.empType]||'')}</div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Earnings</th><th>Hours</th><th>Rate</th><th>Current</th><th>YTD</th></tr></thead>
+      <tbody>${earn}<tr class="tot"><td>Gross pay</td><td></td><td></td><td>${money(s.gross)}</td><td>${money(s.ytd.gross)}</td></tr></tbody></table></div>
+    ${block('Taxes',s.taxes,s.totalTaxes,s.ytd.taxes)}
+    ${block('Deductions',s.deductions,s.totalDed,s.ytd.ded)}
+    <div class="perf"></div>
+    <div class="net"><div><b>Net pay</b><div class="mut">YTD ${money(s.ytd.net)}</div></div><strong>${money(s.net)}</strong></div>
+    ${s.note?`<p class="fine">Memo: ${esc(s.note)}</p>`:''}
+    <p class="fine">${s.empType==='contractor'?'No taxes were withheld. The contractor is responsible for their own tax payments.':'Income tax lines are estimates at the flat rates set for this person, not official withholding calculations.'} Issued by ${esc(s.biz.name||'the employer')} from its own payroll records.</p>
+  </article>`;
+}
+
+/* ---------- PDF ---------- */
+function downloadPdf(s){
+  if(!window.jspdf){toast('The PDF library did not load. Check your connection and try again.');return}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'pt',format:'letter'});
+  const L=54,R=558,W=R-L;let y=60;
+  const ink=()=>doc.setTextColor(20,24,34),mut=()=>doc.setTextColor(107,114,133);
+  const rule=(c=[230,233,241])=>{doc.setDrawColor(...c);doc.setLineWidth(.75);doc.line(L,y,R,y)};
+  const title=s.empType==='contractor'?'Payment statement':'Earnings statement';
+  doc.setFont('helvetica','bold');doc.setFontSize(18);ink();doc.text(s.biz.name||'Your business',L,y);
+  doc.setFontSize(11);doc.text(title,R,y,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);mut();
+  doc.text('Pay date '+fmtDate(s.payDate),R,y+15,{align:'right'});
+  const addr=String(s.biz.address||'').split('\n').filter(Boolean);if(s.biz.ein)addr.push('EIN '+s.biz.ein);
+  addr.forEach((l,i)=>doc.text(l,L,y+16+i*13));
+  y+=Math.max(30,22+addr.length*13);rule();y+=18;
+  const cols=[[s.empType==='contractor'?'PAID TO':'EMPLOYEE',[s.empName,...String(s.empAddress||'').split('\n').filter(Boolean)]],['PAY PERIOD',[fmtDate(s.periodStart)+' – '+fmtDate(s.periodEnd)]],['PAY TYPE',[TYPES[s.empType]||'']]];
+  let maxL=1;cols.forEach(([h,ls],i)=>{const x=L+i*(W/3);doc.setFontSize(8);doc.setFont('helvetica','bold');mut();doc.text(h,x,y);doc.setFont('helvetica','normal');doc.setFontSize(10);ink();ls.forEach((l,j)=>{if(j)mut();doc.text(l,x,y+14+j*13)});maxL=Math.max(maxL,ls.length)});
+  y+=14+maxL*13;rule();y+=26;
+  const table=(heads,rows,tot)=>{
+    const xs=heads.length===5?[L,L+W*.5,L+W*.62,L+W*.81,R]:[L,L+W*.81,R];
+    doc.setFontSize(8);doc.setFont('helvetica','bold');mut();
+    heads.forEach((h,i)=>doc.text(h,i?xs[i]:xs[0],y,{align:i?'right':'left'}));
+    y+=6;rule();y+=14;doc.setFontSize(10);
+    [...rows,tot].forEach((r,ri)=>{const isTot=ri===rows.length;doc.setFont('helvetica',isTot?'bold':'normal');ink();
+      r.forEach((c,i)=>doc.text(String(c),i?xs[i]:xs[0],y,{align:i?'right':'left'}));
+      y+=8;if(!isTot)rule([240,242,247]);y+=12;
+      if(y>720){doc.addPage();y=60}});
+    y+=12;
+  };
+  table(['EARNINGS','HOURS','RATE','CURRENT','YTD'],s.earnings.map(e=>[e.label.replace('×','x'),e.hours!=null?trim(e.hours):'',e.rate!=null?money(e.rate):'',money(e.amount),money(e.ytd)]),['Gross pay','','',money(s.gross),money(s.ytd.gross)]);
+  if(s.taxes.length)table(['TAXES','CURRENT','YTD'],s.taxes.map(e=>[e.label,money(e.amount),money(e.ytd)]),['Total taxes',money(s.totalTaxes),money(s.ytd.taxes)]);
+  if(s.deductions.length)table(['DEDUCTIONS','CURRENT','YTD'],s.deductions.map(e=>[e.label+(e.timing==='pre'?' (pre-tax)':''),money(e.amount),money(e.ytd)]),['Total deductions',money(s.totalDed),money(s.ytd.ded)]);
+  doc.setLineDashPattern([4,3],0);rule([203,209,226]);doc.setLineDashPattern([],0);y+=18;
+  doc.setFillColor(243,245,250);doc.roundedRect(L,y,W,56,10,10,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(11);ink();doc.text('Net pay',L+18,y+24);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);mut();doc.text('YTD '+money(s.ytd.net),L+18,y+40);
+  doc.setFont('helvetica','bold');doc.setFontSize(22);ink();doc.text(money(s.net),R-18,y+36,{align:'right'});
+  y+=80;doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(138,145,166);
+  if(s.note){doc.text(doc.splitTextToSize('Memo: '+s.note,W),L,y);y+=14}
+  doc.text(doc.splitTextToSize((s.empType==='contractor'?'No taxes were withheld. The contractor is responsible for their own tax payments. ':'Income tax lines are estimates at the flat rates set for this person, not official withholding calculations. ')+'Issued by '+(s.biz.name||'the employer')+' from its own payroll records.',W),L,y);
+  doc.save(`stub-${slug(s.empName)}-${s.payDate}.pdf`);
+}
+
+/* ---------- AI ---------- */
+async function api(path,body){
+  ui.ctl=new AbortController();
+  const r=await fetch('/api/stub/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ui.ctl.signal});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Something went wrong. Try again.');
+  return j;
+}
+function newProposal(items,extra={}){
+  const p=defaultPeriod(db.business.freq);
+  return{summary:'',unmatched:[],source:'run',...p,...extra,items};
+}
+const itemFor=(emp,o={})=>({empId:emp.id,hours:String(o.hours!=null?o.hours:defHours(emp)),overtimeHours:String(o.overtimeHours||0),bonus:String(o.bonus||0),note:o.note||''});
+async function plan(){
+  const text=ui.ask.trim();
+  if(!text){toast('Describe this pay period first');$('#ask')?.focus();return}
+  ui.busy=true;ui.aiError='';render();
+  const freq=db.business.freq,period=defaultPeriod(freq);
+  try{
+    const j=await api('plan',{text,today:iso(new Date()),freq,defaultHours:DEFHRS[freq],period,
+      employees:db.employees.map(e=>({id:e.id,name:e.name,type:e.type,rate:num(e.rate),usualHours:defHours(e)}))});
+    const items=(j.items||[]).filter(i=>getEmp(i.empId)).map(i=>itemFor(getEmp(i.empId),{...i,hours:Math.max(0,num(i.hours)),overtimeHours:Math.max(0,num(i.overtimeHours)),bonus:Math.max(0,num(i.bonus))}));
+    if(!items.length){ui.aiError=(j.unmatched||[]).length?`Couldn't match ${j.unmatched.join(', ')} to anyone on your People list.`:"Couldn't work out who to pay from that. Try naming people.";}
+    else{ui.proposal=newProposal(items,{summary:j.summary||'',unmatched:j.unmatched||[],source:'ai',
+      periodStart:isoOk(j.periodStart)?j.periodStart:period.periodStart,periodEnd:isoOk(j.periodEnd)?j.periodEnd:period.periodEnd,payDate:isoOk(j.payDate)?j.payDate:period.payDate});ui.ask=''}
+  }catch(e){if(e.name!=='AbortError')ui.aiError=e.message}
+  finally{ui.busy=false;ui.ctl=null;render()}
+}
+async function reviewDraft(){
+  const s=draftStub();if(!s)return;
+  const prev=db.stubs.filter(x=>x.empId===s.empId&&x.id!==ui.draft.editId&&x.payDate<=s.payDate).sort((a,b)=>a.payDate<b.payDate?1:-1)[0];
+  ui.reviewing=true;ui.review=null;renderReview();
+  try{
+    ui.review=await api('review',{stub:s,previous:prev?{gross:prev.gross,net:prev.net,hours:prev.hours}:null});
+  }catch(e){if(e.name!=='AbortError')ui.review={error:e.message}}
+  finally{ui.reviewing=false;ui.ctl=null;renderReview()}
+}
+
+/* ---------- autopilot ---------- */
+function runAutopilot(manualId){
+  const period=defaultPeriod(db.business.freq);let made=0,drafted=0;
+  for(const rule of db.rules){
+    if(manualId?rule.id!==manualId:(!rule.on||(rule.lastPeriodEnd||'')>=period.periodEnd))continue;
+    const people=(rule.empIds&&rule.empIds.length?rule.empIds.map(getEmp).filter(Boolean):db.employees).filter(e=>!paidFor(e.id,period.periodEnd));
+    const add=o=>({bonus:num(rule.bonus)||0,note:rule.note||'',...o});
+    if(rule.mode==='auto'){people.forEach(e=>{commitStub(e,{...itemFor(e,add({})),...period},'autopilot');made++})}
+    else if(people.length){
+      if(!ui.proposal||ui.proposal.source!=='autopilot'||ui.proposal.periodEnd!==period.periodEnd)ui.proposal=newProposal([],{source:'autopilot',summary:`Autopilot drafted these for ${fmtDate(period.periodStart)} – ${fmtDate(period.periodEnd)}. Check the numbers, then create them.`});
+      people.forEach(e=>{if(!ui.proposal.items.some(i=>i.empId===e.id)){ui.proposal.items.push(itemFor(e,add({})));drafted++}});
+    }
+    rule.lastPeriodEnd=period.periodEnd;rule.lastRun=Date.now();
+  }
+  save();
+  return{made,drafted};
+}
+
+/* ---------- views ---------- */
+function greet(){const h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening'}
+function stubRow(s){
+  return `<button class="rowitem" data-act="openStub" data-id="${s.id}"><span class="av">${esc(initials(s.empName))}</span>
+    <span class="grow"><span class="name">${esc(s.empName)}</span><br><span class="meta">${fmtDate(s.periodStart)} – ${fmtDate(s.periodEnd)} · paid ${fmtDate(s.payDate)}</span></span>
+    <span class="tag quiet">${esc(SOURCES[s.source]||'Run')}</span><span class="amt">${money(s.net)}<br><span class="meta">net</span></span></button>`;
+}
+const recent=n=>[...db.stubs].sort((a,b)=>b.createdAt-a.createdAt).slice(0,n);
+
+function vToday(){
+  const p=defaultPeriod(db.business.freq);
+  let h=`<div class="pagehead"><div><h1>${greet()}${db.business.name?`, ${esc(db.business.name)}`:''}</h1>
+    <p class="sub">Current pay period: ${fmtDate(p.periodStart)} – ${fmtDate(p.periodEnd)}, paid ${fmtDate(p.payDate)}. ${esc(FREQ[db.business.freq])}.</p></div></div>`;
+  if(!db.employees.length){
+    return h+`<section class="hero glass"><h2>Paystubs in one sentence</h2>
+      <p class="sub">Add the people you pay and your business details once. After that, describe each pay period in plain English and Stub drafts every paystub, with taxes, deductions and year-to-date totals, ready to download as PDFs.</p>
+      <div class="actions" style="margin-top:24px"><button class="btn primary" data-act="addEmp">Add your first person</button><button class="btn" data-act="sample">Try it with sample data</button></div></section>`;
+  }
+  h+=`<section class="hero glass"><h2>Run payroll</h2>`;
+  if(ui.ai==='on'){
+    h+=`<p class="sub">Say who worked what. Stub drafts the paystubs and you check them before anything is saved.</p>`;
+    if(ui.busy)h+=`<div class="ask"><div class="think grow"><span class="pulse"></span>Drafting paystubs…</div><button class="btn" data-act="cancel">Cancel</button></div>`;
+    else{
+      const e1=db.employees.find(e=>e.type==='hourly')||db.employees[0];
+      h+=`<div class="ask"><textarea id="ask" data-s="ask" rows="2" aria-label="Describe this pay period" placeholder="e.g. Regular payroll, but ${esc(first(e1.name))} worked 6 hours of overtime">${esc(ui.ask)}</textarea><button class="btn primary" data-act="plan">Draft stubs</button></div>
+      <div class="chips">${['Regular payroll for everyone',`Everyone, plus a $100 bonus each`,`${first(e1.name)} worked 5 hours overtime, everyone else as usual`].map(c=>`<button class="chip" data-act="chip" data-text="${esc(c)}">${esc(c)}</button>`).join('')}
+      <button class="chip" data-act="planDefault">Skip AI, use usual hours</button></div>`;
+    }
+  }else if(ui.ai==='off'){
+    h+=`<p class="sub">Start from everyone's usual hours, adjust anything that changed, then create the stubs.</p>
+      <div class="actions" style="margin-top:24px"><button class="btn primary" data-act="planDefault">Start this pay run</button><button class="btn" data-act="newStub">Single paystub</button></div>
+      <p class="note" style="margin-top:14px">Plain-English drafting is turned off on this server.</p>`;
+  }else h+=`<div class="ask"><div class="think"><span class="pulse"></span>Getting ready…</div></div>`;
+  if(ui.aiError)h+=`<p class="note err">${esc(ui.aiError)}</p>`;
+  h+=`</section>`;
+  if(ui.proposal)h+=vProposal();
+  const r=recent(5);
+  h+=`<section><div class="secthead"><h2>Recent paystubs</h2>${db.stubs.length?`<button class="btn ghost sm" data-act="nav" data-view="stubs">See all</button>`:''}</div>
+    <div class="panel glass pad"><div class="list">${r.length?r.map(stubRow).join(''):`<p class="empty">No paystubs yet. Your first run will show up here.</p>`}</div></div></section>`;
+  return h;
+}
+function propNet(it,p){const e=getEmp(it.empId);return e?buildStub(e,{...it,periodStart:p.periodStart,periodEnd:p.periodEnd,payDate:p.payDate}).net:0}
+function vProposal(){
+  const p=ui.proposal;
+  const rows=p.items.map((it,i)=>{const e=getEmp(it.empId);if(!e)return'';
+    const dup=paidFor(e.id,p.periodEnd);
+    return `<div class="propgrid"><div><div class="name">${esc(e.name)}</div><div class="meta">${esc(TYPES[e.type])} · ${rateLabel(e)}${dup?' · <span style="color:var(--danger)">already paid this period</span>':''}</div></div>
+      <label><span class="l">Hours</span><input inputmode="decimal" data-s="prop" data-i="${i}" data-f="hours" value="${esc(it.hours)}" ${e.type==='salary'?'disabled title="Salary is fixed per period"':''}></label>
+      <label><span class="l">Overtime</span><input inputmode="decimal" data-s="prop" data-i="${i}" data-f="overtimeHours" value="${esc(it.overtimeHours)}" ${e.type!=='hourly'?'disabled':''}></label>
+      <label><span class="l">Bonus $</span><input inputmode="decimal" data-s="prop" data-i="${i}" data-f="bonus" value="${esc(it.bonus)}"></label>
+      <div class="amt"><span class="l">Est. net</span><span id="pnet-${i}">${money(propNet(it,p))}</span></div>
+      <button class="btn ghost sm" data-act="rmItem" data-i="${i}" aria-label="Remove ${esc(e.name)}">Remove</button></div>`}).join('');
+  const others=db.employees.filter(e=>!p.items.some(i=>i.empId===e.id));
+  const total=p.items.reduce((a,it)=>a+propNet(it,p),0);
+  return `<section class="panel glass pad prop"><div class="secthead"><h2>Check this pay run</h2><span class="tag">${p.items.length} paystub${p.items.length===1?'':'s'}</span></div>
+    ${p.summary?`<p class="note" style="margin-bottom:16px">${esc(p.summary)}</p>`:''}
+    <div class="grid3"><div><label class="f" for="ps">Period start</label><input id="ps" type="date" data-s="prop" data-f="periodStart" value="${p.periodStart}"></div>
+      <div><label class="f" for="pe">Period end</label><input id="pe" type="date" data-s="prop" data-f="periodEnd" value="${p.periodEnd}"></div>
+      <div><label class="f" for="pd">Pay date</label><input id="pd" type="date" data-s="prop" data-f="payDate" value="${p.payDate}"></div></div>
+    <div class="list" style="margin-top:18px">${rows||'<p class="empty">Nobody in this run yet.</p>'}</div>
+    ${p.unmatched&&p.unmatched.length?`<p class="note err">Not matched to anyone: ${esc(p.unmatched.join(', '))}. Add them under People if they should be paid.</p>`:''}
+    ${others.length?`<div style="margin-top:12px;max-width:320px"><select data-s="propadd" aria-label="Add someone to this run"><option value="">+ Add someone to this run</option>${others.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>`:''}
+    ${ui.fe?`<p class="note err">${esc(ui.fe)}</p>`:''}
+    <div class="actions" style="margin-top:22px;justify-content:space-between"><span class="note">Total net pay <b id="ptotal" style="color:var(--ink)">${money(total)}</b></span>
+      <span class="actions"><button class="btn ghost" data-act="discard">Discard</button><button class="btn primary" data-act="commit" ${p.items.length?'':'disabled'}>Create ${p.items.length} paystub${p.items.length===1?'':'s'}</button></span></div></section>`;
+}
+
+function vPeople(){
+  const rows=db.employees.map(e=>`<button class="rowitem" data-act="editEmp" data-id="${e.id}"><span class="av">${esc(initials(e.name))}</span>
+    <span class="grow"><span class="name">${esc(e.name)}</span><br><span class="meta">${esc(TYPES[e.type])}${e.type!=='contractor'?` · est. ${trim(num(e.fedPct))}% fed, ${trim(num(e.statePct))}% state`:''}${(e.deductions||[]).length&&e.type!=='contractor'?` · ${e.deductions.length} deduction${e.deductions.length>1?'s':''}`:''}</span></span>
+    <span class="amt">${rateLabel(e)}</span></button>`).join('');
+  return `<div class="pagehead"><div><h1>People</h1><p class="sub">Everyone you pay, with their rate, tax estimates and regular deductions.</p></div><button class="btn primary" data-act="addEmp">Add person</button></div>
+    <div class="panel glass pad"><div class="list">${rows||`<p class="empty">No one yet. Add an employee or contractor to get started.</p>`}</div></div>`;
+}
+
+function vStubs(){
+  const y=String(new Date().getFullYear());
+  const thisYear=db.stubs.filter(s=>String(s.payDate).startsWith(y));
+  return `<div class="pagehead"><div><h1>Paystubs</h1><p class="sub">Every stub you've issued. Open one to download its PDF, edit or check it.</p></div>
+    <button class="btn primary" data-act="newStub" ${db.employees.length?'':'disabled'}>New paystub</button></div>
+    ${db.stubs.length?`<div class="panel glass pad" style="margin-bottom:24px"><div class="stats">
+      <div><span class="meta">Stubs in ${y}</span><b>${thisYear.length}</b></div>
+      <div><span class="meta">Gross paid in ${y}</span><b>${money(thisYear.reduce((a,s)=>a+s.gross,0))}</b></div>
+      <div><span class="meta">Net paid in ${y}</span><b>${money(thisYear.reduce((a,s)=>a+s.net,0))}</b></div></div></div>
+    <div class="fg"><input type="search" data-s="q" placeholder="Search by name or date" aria-label="Search paystubs" value="${esc(ui.q)}"></div>`:''}
+    <div class="panel glass pad"><div class="list" id="stublist">${stubList()}</div></div>`;
+}
+function stubList(){
+  const q=ui.q.trim().toLowerCase();
+  const list=[...db.stubs].sort((a,b)=>a.payDate<b.payDate?1:a.payDate>b.payDate?-1:b.createdAt-a.createdAt)
+    .filter(s=>!q||s.empName.toLowerCase().includes(q)||s.payDate.includes(q)||fmtDate(s.payDate).toLowerCase().includes(q));
+  return list.length?list.map(stubRow).join(''):`<p class="empty">${db.stubs.length?'Nothing matches that search.':'No paystubs yet.'}</p>`;
+}
+
+function draftStub(){
+  const d=ui.draft,e=d&&getEmp(d.empId);if(!e)return null;
+  const old=d.editId&&getStub(d.editId);
+  return buildStub(e,{...d,createdAt:old?old.createdAt:undefined},d.editId);
+}
+function vEdit(){
+  const d=ui.draft,e=getEmp(d.empId);
+  const s=draftStub();
+  return `<div class="pagehead"><div><h1>${d.editId?'Edit paystub':'New paystub'}</h1><p class="sub">${d.editId?'Saving recalculates this stub with the person\'s current rate and tax settings.':'The preview updates as you type.'}</p></div></div>
+  <div class="split"><div class="form panel glass pad">
+    <div class="fg"><label class="f" for="de">Person</label><select id="de" data-s="draft" data-f="empId" ${d.editId?'disabled':''}>${db.employees.map(x=>`<option value="${x.id}" ${x.id===d.empId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="grid2 fg"><div><label class="f" for="dps">Period start</label><input id="dps" type="date" data-s="draft" data-f="periodStart" value="${d.periodStart}"></div>
+      <div><label class="f" for="dpe">Period end</label><input id="dpe" type="date" data-s="draft" data-f="periodEnd" value="${d.periodEnd}"></div></div>
+    <div class="fg"><label class="f" for="dpd">Pay date</label><input id="dpd" type="date" data-s="draft" data-f="payDate" value="${d.payDate}"></div>
+    ${e&&e.type!=='salary'?`<div class="grid2 fg"><div><label class="f" for="dh">Hours</label><input id="dh" inputmode="decimal" data-s="draft" data-f="hours" value="${esc(d.hours)}"></div>
+      ${e.type==='hourly'?`<div><label class="f" for="dot">Overtime hours</label><input id="dot" inputmode="decimal" data-s="draft" data-f="overtimeHours" value="${esc(d.overtimeHours)}"></div>`:''}</div>`:''}
+    <div class="fg"><label class="f" for="db">Bonus ($)</label><input id="db" inputmode="decimal" data-s="draft" data-f="bonus" value="${esc(d.bonus)}"></div>
+    <div class="fg"><label class="f" for="dn">Memo (optional)</label><input id="dn" data-s="draft" data-f="note" maxlength="140" value="${esc(d.note)}"></div>
+    ${ui.fe?`<p class="note err" style="margin-bottom:12px">${esc(ui.fe)}</p>`:''}
+    <div class="actions"><button class="btn primary" data-act="saveDraft">${d.editId?'Save changes':'Create paystub'}</button>
+      ${ui.ai==='on'?`<button class="btn" data-act="review">Check with AI</button>`:''}<button class="btn ghost" data-act="cancelEdit">Cancel</button></div>
+    <div id="review">${reviewHtml()}</div>
+  </div><div id="preview">${s?paper(s):'<p class="empty">Pick a person.</p>'}</div></div>`;
+}
+function reviewHtml(){
+  if(ui.reviewing)return `<div class="review think"><span class="pulse"></span>Checking…</div>`;
+  const r=ui.review;if(!r)return'';
+  if(r.error)return `<p class="note err">${esc(r.error)}</p>`;
+  return `<div class="review">${r.ok?`<span class="okline">Looks right.</span>`:`<b>Worth a second look</b>`}${(r.notes||[]).length?`<ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}</div>`;
+}
+function renderReview(){const el=$('#review');if(el)el.innerHTML=reviewHtml()}
+
+function vAuto(){
+  const p=defaultPeriod(db.business.freq);
+  const rows=db.rules.map(r=>{const who=r.empIds&&r.empIds.length?r.empIds.map(id=>getEmp(id)?.name).filter(Boolean).join(', '):'Everyone';
+    return `<div class="rowitem"><span class="grow"><span class="name">${esc(r.name||'Untitled rule')}</span><br>
+      <span class="meta">${esc(who)} · usual hours${num(r.bonus)>0?` + ${money(r.bonus)} bonus`:''} · ${r.lastRun?`last ran for period ending ${fmtDate(r.lastPeriodEnd)}`:'hasn\'t run yet'}</span></span>
+      <span class="tag ${r.on?'':'quiet'}">${r.on?(r.mode==='auto'?'Creates stubs':'Drafts for review'):'Paused'}</span>
+      <span class="actions"><button class="btn sm" data-act="runRule" data-id="${r.id}">Run now</button><button class="btn sm ghost" data-act="toggleRule" data-id="${r.id}">${r.on?'Pause':'Resume'}</button><button class="btn sm ghost" data-act="editRule" data-id="${r.id}">Edit</button></span></div>`}).join('');
+  return `<div class="pagehead"><div><h1>Autopilot</h1><p class="sub">Rules run on their own when you open Stub after a pay period ends. Next up: the period ending ${fmtDate(p.periodEnd)}. Nobody gets paid twice for the same period.</p></div>
+    <button class="btn primary" data-act="addRule" ${db.employees.length?'':'disabled'}>Add rule</button></div>
+    <div class="panel glass pad"><div class="list">${rows||`<p class="empty">No rules yet. A rule like "Everyone, usual hours, drafts for review" turns each payday into a single click.</p>`}</div></div>`;
+}
+
+function vSettings(){
+  const b=db.business,th=getTheme();
+  return `<div class="pagehead"><div><h1>Settings</h1><p class="sub">These details print at the top of every paystub. Changes save as you type.</p></div></div>
+  <section class="panel glass pad">
+    <div class="fg"><label class="f" for="bn">Business name</label><input id="bn" data-s="biz" data-f="name" value="${esc(b.name)}" autocomplete="organization"></div>
+    <div class="fg"><label class="f" for="ba">Address</label><textarea id="ba" rows="2" data-s="biz" data-f="address">${esc(b.address)}</textarea></div>
+    <div class="grid2"><div class="fg"><label class="f" for="be">EIN (optional)</label><input id="be" data-s="biz" data-f="ein" value="${esc(b.ein)}" placeholder="12-3456789"></div>
+      <div class="fg"><label class="f" for="bf">Pay schedule</label><select id="bf" data-s="biz" data-f="freq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${b.freq===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
+    <div class="fg" style="max-width:240px"><label class="f" for="bt">Appearance</label><select id="bt" data-s="theme">${[['auto','Match system'],['light','Light'],['dark','Dark']].map(([k,v])=>`<option value="${k}" ${th===k?'selected':''}>${v}</option>`).join('')}</select></div>
+  </section>
+  <section><div class="secthead"><h2>Your data</h2></div><div class="panel glass pad">
+    <p class="note" style="margin-bottom:16px">Everything is stored only in this browser on this device. Export a backup regularly, or to move to another device.${ui.ai==='on'?' When you use AI drafting, names, pay types and rates are sent to the AI service for that one request and are not stored.':''}</p>
+    <div class="actions"><button class="btn" data-act="export">Export backup</button>
+      <label class="btn" style="display:inline-block">Import backup<input type="file" accept="application/json,.json" data-s="import" hidden></label>
+      <button class="btn danger" data-act="erase">Erase everything</button></div></div></section>`;
+}
+const VIEWS={today:vToday,people:vPeople,stubs:vStubs,edit:vEdit,auto:vAuto,settings:vSettings};
+
+function render(){
+  const v=ui.view==='edit'?'stubs':ui.view;
+  document.querySelectorAll('.nav button').forEach(b=>{const on=b.dataset.view===v;b.classList.toggle('on',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')});
+  $('#railfoot').textContent=db.business.name||'';
+  $('#main').innerHTML=VIEWS[ui.view]();
+}
+
+/* ---------- modals ---------- */
+function renderModal(){
+  const m=$('#modal');
+  if(!ui.modal){m.classList.remove('on');m.innerHTML='';return}
+  let html='',wide=false;
+  if(ui.modal==='emp')html=mEmp();
+  else if(ui.modal==='rule')html=mRule();
+  else if(ui.modal==='stub'){const s=getStub(ui.open);if(!s){ui.modal=null;return renderModal()}wide=true;html=mStub(s)}
+  const keep=m.classList.contains('on')?m.querySelector('.sheet')?.scrollTop:0;
+  m.innerHTML=`<div class="scrim" data-act="close"></div><div class="sheet glass${wide?' wide':''}" role="dialog" aria-modal="true">${html}</div>`;
+  m.classList.add('on');m.querySelector('.sheet').scrollTop=keep||0;
+}
+function openModal(name){ui.modal=name;ui.fe='';renderModal();setTimeout(()=>$('#modal input:not([type=checkbox]),#modal button.btn')?.focus(),30)}
+function closeModal(){ui.modal=null;ui.empDraft=null;ui.ruleDraft=null;ui.open=null;renderModal()}
+
+function mEmp(){
+  const e=ui.empDraft,c=e.type==='contractor';
+  const ded=(e.deductions||[]).map((d,i)=>`<div class="ded"><input aria-label="Deduction name" placeholder="e.g. Health insurance" data-s="emp" data-i="${i}" data-f="label" value="${esc(d.label)}">
+    <input aria-label="Amount" inputmode="decimal" placeholder="0" data-s="emp" data-i="${i}" data-f="amount" value="${esc(d.amount)}">
+    <select aria-label="Amount type" data-s="emp" data-i="${i}" data-f="mode"><option value="flat" ${d.mode!=='pct'?'selected':''}>$</option><option value="pct" ${d.mode==='pct'?'selected':''}>% of gross</option></select>
+    <select aria-label="Tax timing" data-s="emp" data-i="${i}" data-f="timing"><option value="pre" ${d.timing==='pre'?'selected':''}>Pre-tax</option><option value="post" ${d.timing!=='pre'?'selected':''}>After tax</option></select>
+    <button class="btn ghost sm" data-act="rmDed" data-i="${i}" aria-label="Remove deduction">✕</button></div>`).join('');
+  return `<h2>${e.id?'Edit person':'Add person'}</h2>
+    <div class="fg"><label class="f" for="en">Full name</label><input id="en" data-s="emp" data-f="name" value="${esc(e.name)}" autocomplete="off"></div>
+    <div class="fg"><label class="f" for="ea">Mailing address (optional)</label><textarea id="ea" rows="2" data-s="emp" data-f="address">${esc(e.address)}</textarea></div>
+    <div class="grid2"><div class="fg"><label class="f" for="et">How they're paid</label><select id="et" data-s="emp" data-f="type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${e.type===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="fg"><label class="f" for="er">${e.type==='salary'?'Annual salary ($)':'Rate per hour ($)'}</label><input id="er" inputmode="decimal" data-s="emp" data-f="rate" value="${esc(e.rate)}"></div></div>
+    ${e.type!=='salary'?`<div class="fg"><label class="f" for="eh">Usual hours per pay period</label><input id="eh" inputmode="decimal" data-s="emp" data-f="hours" value="${esc(e.hours)}" placeholder="${e.type==='hourly'?DEFHRS[db.business.freq]:'0'}"><p class="hint">Used when you say "as usual" or let Autopilot run.</p></div>`:''}
+    ${c?`<p class="note fg">Contractors get a payment statement with no withholding or deductions.</p>`:`
+    <div class="grid2"><div class="fg"><label class="f" for="ef">Federal income tax (%)</label><input id="ef" inputmode="decimal" data-s="emp" data-f="fedPct" value="${esc(e.fedPct)}"></div>
+      <div class="fg"><label class="f" for="es">State income tax (%)</label><input id="es" inputmode="decimal" data-s="emp" data-f="statePct" value="${esc(e.statePct)}"></div></div>
+    <p class="hint" style="margin:-8px 0 18px">Flat estimates applied to taxable pay. Social Security (6.2%) and Medicare (1.45%) are added automatically.</p>
+    <label class="f">Regular deductions</label>${ded}<button class="btn sm" data-act="addDed" style="margin-bottom:18px">Add deduction</button>`}
+    ${ui.fe?`<p class="note err" style="margin-bottom:12px">${esc(ui.fe)}</p>`:''}
+    <div class="actions" style="justify-content:space-between">${e.id?`<button class="btn danger" data-act="delEmp">Remove person</button>`:'<span></span>'}
+      <span class="actions"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveEmp">Save</button></span></div>`;
+}
+function mRule(){
+  const r=ui.ruleDraft,all=!r.empIds.length&&!r.pickMode;
+  return `<h2>${r.id?'Edit rule':'New Autopilot rule'}</h2>
+    <div class="fg"><label class="f" for="rn">Name</label><input id="rn" data-s="rule" data-f="name" value="${esc(r.name)}" placeholder="Regular payroll"></div>
+    <div class="fg checks"><label class="f">Who it pays</label>
+      <label><input type="checkbox" data-s="rule" data-f="all" ${all?'checked':''}>Everyone, including people added later</label>
+      ${all?'':db.employees.map(e=>`<label><input type="checkbox" data-s="rule" data-f="emp" data-id="${e.id}" ${r.empIds.includes(e.id)?'checked':''}>${esc(e.name)}</label>`).join('')}</div>
+    <div class="grid2"><div class="fg"><label class="f" for="rm">When a period ends</label><select id="rm" data-s="rule" data-f="mode"><option value="draft" ${r.mode!=='auto'?'selected':''}>Draft stubs for me to review</option><option value="auto" ${r.mode==='auto'?'selected':''}>Create stubs automatically</option></select></div>
+      <div class="fg"><label class="f" for="rb">Bonus each period ($)</label><input id="rb" inputmode="decimal" data-s="rule" data-f="bonus" value="${esc(r.bonus)}" placeholder="0"></div></div>
+    <div class="fg"><label class="f" for="rt">Memo on each stub (optional)</label><input id="rt" data-s="rule" data-f="note" maxlength="140" value="${esc(r.note)}"></div>
+    <p class="hint fg">Everyone is paid their usual hours. Draft mode lets you adjust before anything is created.</p>
+    ${ui.fe?`<p class="note err" style="margin-bottom:12px">${esc(ui.fe)}</p>`:''}
+    <div class="actions" style="justify-content:space-between">${r.id?`<button class="btn danger" data-act="delRule">Delete rule</button>`:'<span></span>'}
+      <span class="actions"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveRule">Save</button></span></div>`;
+}
+function mStub(s){
+  return `<div class="sheethead"><div><h2>${esc(s.empName)}</h2><p class="meta">${esc(SOURCES[s.source]||'Run')} · created ${new Date(s.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p></div>
+    <div class="actions"><button class="btn primary" data-act="pdf" data-id="${s.id}">Download PDF</button>${getEmp(s.empId)?`<button class="btn" data-act="editStub" data-id="${s.id}">Edit</button>`:''}<button class="btn danger" data-act="delStub" data-id="${s.id}">Delete</button><button class="btn ghost" data-act="close" aria-label="Close">Close</button></div></div>
+    ${paper(s)}`;
+}
+
+/* ---------- theme & toast ---------- */
+function getTheme(){try{return localStorage.getItem('stub:theme')||'auto'}catch(e){return'auto'}}
+function setTheme(t){if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;try{localStorage.setItem('stub:theme',t)}catch(e){}}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2600)}
+
+/* ---------- actions ---------- */
+function validPeriod(o){
+  if(!isoOk(o.periodStart)||!isoOk(o.periodEnd)||!isoOk(o.payDate))return'Fill in all three dates.';
+  if(o.periodStart>o.periodEnd)return'The period has to start before it ends.';
+  if(o.payDate<o.periodStart)return'The pay date can\'t be before the period starts.';
+  return'';
+}
+function startDraft(empId){
+  const e=getEmp(empId)||db.employees[0];
+  ui.draft={empId:e.id,...defaultPeriod(db.business.freq),hours:String(defHours(e)),overtimeHours:'0',bonus:'0',note:''};
+  ui.review=null;ui.fe='';ui.view='edit';closeModal();render();scrollTo(0,0);
+}
+function loadSample(){
+  db.business={name:'Prairie Pie Co.',address:'412 Main Street\nAmes, IA 50010',ein:'',freq:'biweekly'};
+  db.employees=[
+    {id:uid(),name:'Maria Lopez',address:'',type:'hourly',rate:'22',hours:'',fedPct:'10',statePct:'3.8',deductions:[{label:'Health insurance',amount:'85',mode:'flat',timing:'pre'}]},
+    {id:uid(),name:'Sam Patel',address:'',type:'salary',rate:'58000',hours:'',fedPct:'12',statePct:'3.8',deductions:[{label:'401(k)',amount:'5',mode:'pct',timing:'pre'}]},
+    {id:uid(),name:'Jordan Lee',address:'',type:'contractor',rate:'45',hours:'20',fedPct:'',statePct:'',deductions:[]}];
+  save();toast('Sample business loaded');render();
+}
+const acts={
+  nav:el=>{ui.view=el.dataset.view;ui.fe='';render();scrollTo(0,0)},
+  close:closeModal,
+  sample:loadSample,
+  chip:el=>{ui.ask=el.dataset.text;plan()},
+  plan,
+  cancel:()=>{ui.ctl&&ui.ctl.abort()},
+  planDefault:()=>{ui.proposal=newProposal(db.employees.map(e=>itemFor(e)),{summary:'Everyone at their usual hours. Change anything that was different this period.'});ui.fe='';render()},
+  rmItem:el=>{ui.proposal.items.splice(+el.dataset.i,1);render()},
+  discard:()=>{ui.proposal=null;ui.fe='';render()},
+  commit:()=>{
+    const p=ui.proposal,err=validPeriod(p);if(err){ui.fe=err;render();return}
+    const made=p.items.map(it=>{const e=getEmp(it.empId);return e&&commitStub(e,{...it,periodStart:p.periodStart,periodEnd:p.periodEnd,payDate:p.payDate},p.source)}).filter(Boolean);
+    ui.proposal=null;ui.fe='';render();toast(`${made.length} paystub${made.length===1?'':'s'} created`);
+  },
+  addEmp:()=>{ui.empDraft={name:'',address:'',type:'hourly',rate:'',hours:'',fedPct:'10',statePct:'',deductions:[]};openModal('emp')},
+  editEmp:el=>{ui.empDraft=JSON.parse(JSON.stringify(getEmp(el.dataset.id)));ui.empDraft.deductions=ui.empDraft.deductions||[];openModal('emp')},
+  addDed:()=>{ui.empDraft.deductions.push({label:'',amount:'',mode:'flat',timing:'pre'});renderModal()},
+  rmDed:el=>{ui.empDraft.deductions.splice(+el.dataset.i,1);renderModal()},
+  saveEmp:()=>{
+    const e=ui.empDraft;e.name=e.name.trim();
+    if(!e.name){ui.fe='Add a name.';return renderModal()}
+    if(!(num(e.rate)>0)){ui.fe=e.type==='salary'?'Add an annual salary.':'Add an hourly rate.';return renderModal()}
+    e.deductions=(e.deductions||[]).filter(d=>d.label.trim()||num(d.amount));
+    if(e.id){const i=db.employees.findIndex(x=>x.id===e.id);db.employees[i]=e}else{e.id=uid();db.employees.push(e)}
+    save();closeModal();render();toast('Saved');
+  },
+  delEmp:()=>{
+    const e=ui.empDraft;if(!confirm(`Remove ${e.name}? Their past paystubs are kept.`))return;
+    db.employees=db.employees.filter(x=>x.id!==e.id);db.rules.forEach(r=>r.empIds=r.empIds.filter(id=>id!==e.id));
+    if(ui.proposal)ui.proposal.items=ui.proposal.items.filter(i=>i.empId!==e.id);
+    save();closeModal();render();toast('Removed');
+  },
+  newStub:()=>startDraft(),
+  openStub:el=>{ui.open=el.dataset.id;openModal('stub')},
+  pdf:el=>downloadPdf(getStub(el.dataset.id)),
+  editStub:el=>{const s=getStub(el.dataset.id);
+    ui.draft={editId:s.id,empId:s.empId,periodStart:s.periodStart,periodEnd:s.periodEnd,payDate:s.payDate,hours:String(s.hours),overtimeHours:String(s.overtimeHours),bonus:String(s.bonus),note:s.note||''};
+    ui.review=null;ui.fe='';ui.view='edit';closeModal();render();scrollTo(0,0)},
+  delStub:el=>{const s=getStub(el.dataset.id);if(!confirm(`Delete ${s.empName}'s paystub paid ${fmtDate(s.payDate)}? This can't be undone.`))return;
+    db.stubs=db.stubs.filter(x=>x.id!==s.id);recalcYtd(s.empId);save();closeModal();render();toast('Deleted')},
+  saveDraft:()=>{
+    const d=ui.draft,e=getEmp(d.empId),err=validPeriod(d);
+    if(!e){ui.fe='Pick a person.';return render()}
+    if(err){ui.fe=err;return render()}
+    if(d.editId){
+      const old=getStub(d.editId),s=draftStub();
+      Object.assign(s,{id:old.id,createdAt:old.createdAt,source:old.source,editedAt:Date.now()});
+      db.stubs[db.stubs.findIndex(x=>x.id===old.id)]=s;recalcYtd(e.id);save();
+      ui.draft=null;ui.view='stubs';render();toast('Paystub updated');
+    }else{
+      if(paidFor(e.id,d.periodEnd)&&!confirm(`${e.name} already has a paystub for this period. Create another?`))return;
+      const s=commitStub(e,d,'manual');ui.draft=null;ui.view='stubs';render();ui.open=s.id;openModal('stub');
+    }
+  },
+  cancelEdit:()=>{ui.ctl&&ui.ctl.abort();ui.draft=null;ui.view='stubs';render()},
+  review:reviewDraft,
+  addRule:()=>{ui.ruleDraft={name:'Regular payroll',empIds:[],mode:'draft',bonus:'',note:'',on:true};openModal('rule')},
+  editRule:el=>{ui.ruleDraft=JSON.parse(JSON.stringify(db.rules.find(r=>r.id===el.dataset.id)));openModal('rule')},
+  saveRule:()=>{
+    const r=ui.ruleDraft;r.name=r.name.trim()||'Regular payroll';
+    if(r.pickMode&&!r.empIds.length){ui.fe='Pick at least one person, or choose everyone.';return renderModal()}
+    delete r.pickMode;
+    if(r.id){db.rules[db.rules.findIndex(x=>x.id===r.id)]=r}else{r.id=uid();db.rules.push(r)}
+    save();closeModal();render();toast('Rule saved');
+  },
+  delRule:()=>{if(!confirm('Delete this rule?'))return;db.rules=db.rules.filter(r=>r.id!==ui.ruleDraft.id);save();closeModal();render()},
+  toggleRule:el=>{const r=db.rules.find(x=>x.id===el.dataset.id);r.on=!r.on;save();render()},
+  runRule:el=>{const {made,drafted}=runAutopilot(el.dataset.id);
+    if(drafted){ui.view='today';render();toast(`${drafted} paystub${drafted===1?'':'s'} drafted for review`)}
+    else{render();toast(made?`${made} paystub${made===1?'':'s'} created`:'Everyone in this rule is already paid for this period')}},
+  export:()=>{
+    const blob=new Blob([JSON.stringify({app:'stub',version:1,exportedAt:new Date().toISOString(),...db},null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`stub-backup-${iso(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  },
+  erase:()=>{if(!confirm('Erase all people, paystubs, rules and business details from this browser? Export a backup first if you might need them.'))return;
+    db.business={name:'',address:'',ein:'',freq:'biweekly'};db.employees=[];db.stubs=[];db.rules=[];ui.proposal=null;save();ui.view='today';render();toast('Everything erased')},
+};
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
+  const f=acts[el.dataset.act];if(f){e.preventDefault();f(el)}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&ui.modal)closeModal();
+  if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&e.target.id==='ask')plan();
+});
+function onField(e){
+  const el=e.target.closest('[data-s]');if(!el)return;
+  const s=el.dataset.s,f=el.dataset.f,i=el.dataset.i,v=el.type==='checkbox'?el.checked:el.value;
+  if(s==='import'){if(e.type==='change')importFile(el);return}
+  if(e.type==='change'&&el.tagName!=='SELECT'&&el.type!=='checkbox'&&el.type!=='date')return;
+  switch(s){
+    case 'ask':ui.ask=v;break;
+    case 'q':ui.q=v;$('#stublist').innerHTML=stubList();break;
+    case 'theme':setTheme(v);break;
+    case 'biz':db.business[f]=v;save();$('#railfoot').textContent=db.business.name||'';break;
+    case 'prop':{
+      const p=ui.proposal;if(i!=null)p.items[+i][f]=v;else p[f]=v;
+      p.items.forEach((it,k)=>{const n=$('#pnet-'+k);if(n)n.textContent=money(propNet(it,p))});
+      const t=$('#ptotal');if(t)t.textContent=money(p.items.reduce((a,it)=>a+propNet(it,p),0));break}
+    case 'propadd':if(v){ui.proposal.items.push(itemFor(getEmp(v)));render()}break;
+    case 'draft':{
+      ui.draft[f]=v;ui.review=null;
+      if(f==='empId'){const emp=getEmp(v);ui.draft.hours=String(defHours(emp));ui.draft.overtimeHours='0';render();break}
+      const st=draftStub();$('#preview').innerHTML=st?paper(st):'';renderReview();break}
+    case 'emp':
+      if(i!=null)ui.empDraft.deductions[+i][f]=v;else ui.empDraft[f]=v;
+      if(f==='type')renderModal();break;
+    case 'rule':{
+      const r=ui.ruleDraft;
+      if(f==='all'){r.empIds=v?[]:db.employees.map(x=>x.id);r.pickMode=!v;renderModal()}
+      else if(f==='emp'){const id=el.dataset.id;r.empIds=v?[...new Set([...r.empIds,id])]:r.empIds.filter(x=>x!==id);r.pickMode=true}
+      else r[f]=v;break}
+  }
+}
+/* text fields update on input; selects, dates, checkboxes and file pickers settle on change */
+document.addEventListener('input',e=>{const t=e.target;if(t.tagName==='SELECT'||t.type==='checkbox'||t.type==='file'||t.type==='date')return;onField(e)});
+document.addEventListener('change',onField);
+
+function importFile(el){
+  const file=el.files&&el.files[0];if(!file)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const j=JSON.parse(rd.result);
+    if(!j||!Array.isArray(j.employees)||!Array.isArray(j.stubs))throw new Error('bad');
+    if(!confirm(`Replace everything in this browser with this backup (${j.employees.length} people, ${j.stubs.length} paystubs)?`))return;
+    db.business={name:'',address:'',ein:'',freq:'biweekly',...(j.business||{})};
+    if(!PERIODS[db.business.freq])db.business.freq='biweekly';
+    db.employees=j.employees;db.stubs=j.stubs;db.rules=Array.isArray(j.rules)?j.rules:[];
+    save();ui.proposal=null;render();toast('Backup restored');
+  }catch(err){toast('That file isn\'t a Stub backup')}finally{el.value=''}};
+  rd.readAsText(file);
+}
+
+/* ---------- boot ---------- */
+setTheme(getTheme());
+render();
+(async()=>{
+  try{const r=await fetch('/api/stub/status');const j=await r.json();ui.ai=j.ai?'on':'off'}catch(e){ui.ai='off'}
+  if(db.employees.length&&db.rules.length){
+    const {made,drafted}=runAutopilot();
+    if(made)toast(`Autopilot created ${made} paystub${made===1?'':'s'}`);
+    else if(drafted)toast(`Autopilot drafted ${drafted} paystub${drafted===1?'':'s'} for you to check`);
+  }
+  render();
+})();
+</script>
+</body>
+</html>

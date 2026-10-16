@@ -24,6 +24,7 @@
     "vault:status": "bash secrets/vault.sh status",
     "vault:edit": "bash secrets/vault.sh edit",
     "vault:docker": "bash secrets/vault.sh docker",
+    "key:set": "bash secrets/set-key.sh",
     "deploy": "bash deploy.sh",
     "deploy:check": "bash deploy.sh --check",
     "deploy:restart": "bash deploy.sh --restart",

@@ -24,6 +24,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://hamhead:dev_password_123@postgres:5432/hamheadai?schema=public
       - JWT_SECRET=ham-head-ai-super-secret-key-2024-midwest-agentic
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLIENT_URL=http://localhost:5173
       - NODE_ENV=development
     depends_on:
